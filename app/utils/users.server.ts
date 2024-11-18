@@ -47,9 +47,11 @@ export const getUserById = async (userId: string) => {
 export const getUsers = async ({
   sortFilter,
   whereFilter,
+  limit,
 }: {
   sortFilter?: Prisma.UserOrderByWithRelationInput;
   whereFilter?: Prisma.UserWhereInput;
+  limit?: number;
 }): Promise<User[]> => {
   const users = await prisma.user.findMany({
     include: {
@@ -57,12 +59,17 @@ export const getUsers = async ({
     },
     orderBy: sortFilter,
     where: whereFilter,
+    take: limit,
   });
 
-  return users.map((user) => ({
-    ...user,
-    entryCount: user._count.entries,
-  }));
+  return users.map((user) => {
+    const entryCount = user._count.entries;
+    delete user._count;
+    return {
+      ...user,
+      entryCount,
+    };
+  });
 };
 
 export const updateUser = async (

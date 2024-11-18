@@ -59,7 +59,6 @@ export async function action({ request, params }: ActionFunctionArgs) {
   if (!params.userId) return redirect("/");
   const { userId } = params;
   const formData = Object.fromEntries(await request.formData());
-  console.log("formData: ", formData);
   const intent = formData.intent;
   switch (intent) {
     case "create_comment":
@@ -110,7 +109,6 @@ export async function action({ request, params }: ActionFunctionArgs) {
       await updateUser(userId, updateUserForm.data);
       return Response.json({ ok: true, intent }, { status: 200 });
     case "delete_comment":
-      console.log("formData: ", formData);
       if (formData.entryId && typeof formData.entryId === "string") {
         await deleteGuestbookEntry(formData.entryId);
         return redirect(`/users/${userId}`);
