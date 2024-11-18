@@ -22,16 +22,19 @@ import { GuestbookEntryCard } from "~/components/guestbook-entry-card";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import {
   createGuestbookEntry,
-  deleteEntry,
+  deleteGuestbookEntry,
+  updateGuestbookEntry,
 } from "~/utils/guestbook-entry.server";
 import {
   CreateGuestBookInputError,
   createGuestBookSchema,
+  updateGuestBookSchema,
   UpdateUserInputError,
   updateUserSchema,
 } from "~/utils/validation-schemas";
 import { FormInputGroup } from "~/components/form-input-group";
 import { PrimaryButton } from "~/components/primary-button";
+import { GuestBookEntryFormGroup } from "~/components/guestbook-entry-form";
 
 export const meta: MetaFunction = () => {
   return [{ title: "User Detail Page" }];
@@ -73,6 +76,24 @@ export async function action({ request, params }: ActionFunctionArgs) {
       }
       await createGuestbookEntry(createEntryForm.data.comment, userId);
       return Response.json({ ok: true, intent }, { status: 200 });
+    case "update_comment":
+      const updateEntryForm = updateGuestBookSchema.safeParse(formData);
+      if (!updateEntryForm.success) {
+        return Response.json(
+          {
+            createEntryInputError: updateEntryForm.error.format(),
+            ok: false,
+            intent,
+          },
+          { status: 400 }
+        );
+      }
+      await updateGuestbookEntry(
+        updateEntryForm.data.comment,
+        updateEntryForm.data.entryId
+      );
+      return Response.json({ ok: true, intent }, { status: 200 });
+
     case "edit_user":
       const updateUserForm = updateUserSchema.safeParse(formData);
       console.log("updateUserForm: ", updateUserForm);
@@ -91,7 +112,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
     case "delete_comment":
       console.log("formData: ", formData);
       if (formData.entryId && typeof formData.entryId === "string") {
-        await deleteEntry(formData.entryId);
+        await deleteGuestbookEntry(formData.entryId);
         return redirect(`/users/${userId}`);
       }
       return Response.json({ ok: false, intent }, { status: 400 });
@@ -108,8 +129,8 @@ export default function UserDetailPage() {
   const navigation = useNavigation();
   const submit = useSubmit();
   const actionData = useActionData<UserDetailActionData>();
-  const commentForm = useRef<HTMLFormElement>(null);
-  const editUserForm = useRef<HTMLFormElement>(null);
+  const commentFormRef = useRef<HTMLFormElement>(null);
+  const editUserFormRef = useRef<HTMLFormElement>(null);
 
   const [editMode, setEditMode] = useState(false);
   // When user enters a new thumbnail url, we update the UI, so they can preview their profile picture before editing
@@ -120,10 +141,10 @@ export default function UserDetailPage() {
     if (navigation.state === "idle" && actionData?.ok) {
       // sucessfull operation
       if (actionData.intent === "create_comment") {
-        commentForm.current?.reset();
+        commentFormRef.current?.reset();
       } else if (actionData.intent === "edit_user") {
         setEditMode(false);
-        editUserForm.current?.reset();
+        editUserFormRef.current?.reset();
       }
     }
   }, [navigation.state, actionData]);
@@ -157,7 +178,7 @@ export default function UserDetailPage() {
                 <Form
                   method="POST"
                   className="flex-col w-full"
-                  ref={editUserForm}
+                  ref={editUserFormRef}
                 >
                   <FormInputGroup
                     validationError={
@@ -251,7 +272,16 @@ export default function UserDetailPage() {
               ) : (
                 <>
                   {userDetail.entries.map((entry, idx) => (
-                    <GuestbookEntryCard key={`entry-${idx}`} entry={entry} />
+                    <GuestbookEntryCard
+                      key={`entry-${idx}`}
+                      entry={entry}
+                      navigationState={navigation.state}
+                      validationError={
+                        actionData &&
+                        actionData.createEntryInputError?.comment &&
+                        actionData.createEntryInputError.comment._errors[0]
+                      }
+                    />
                   ))}
                 </>
               )}
@@ -259,30 +289,19 @@ export default function UserDetailPage() {
           </div>
         </section>
         <section className="flex-col w-full">
-          <div className="p-5 border rounded text-center bg-gray-700 text-gray-500 min-w-sm">
-            <Form method="POST" ref={commentForm}>
-              <label
-                htmlFor="message"
-                className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-              >
-                Your message
-              </label>
-              <textarea
-                id="comment"
-                rows={6}
-                name="comment"
-                className="block p-2.5 resize-none w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                placeholder="Write your thoughts..."
-              ></textarea>
-              <PrimaryButton
-                name="intent"
-                value="create_comment"
-                className="mt-2"
-              >
-                {navigation.state === "idle" ? "Comment" : "Loading.."}
-              </PrimaryButton>
-            </Form>
-          </div>
+          <Form method="POST" ref={commentFormRef}>
+            <GuestBookEntryFormGroup
+              id={"comment"}
+              name={"comment"}
+              navigationState={navigation.state}
+              validationError={
+                actionData &&
+                actionData.createEntryInputError?.comment &&
+                actionData.createEntryInputError.comment._errors[0]
+              }
+              intent="create_comment"
+            />
+          </Form>
         </section>
       </div>
     </div>

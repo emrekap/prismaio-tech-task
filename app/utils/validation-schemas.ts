@@ -38,3 +38,14 @@ export type CreateGuestBookInputError = {
   _errors: [];
   comment: { _errors: string[] };
 };
+
+export const updateGuestBookSchema = z.object({
+  entryId: z.string().uuid(),
+  comment: z.string().min(3),
+});
+
+export type UpdateGuestBookInputError = {
+  _errors: [];
+  comment: { _errors: string[] };
+  entryId: { _errors: string[] };
+};

@@ -1,11 +1,7 @@
-import { prisma } from "./prisma.server";
+import { Prisma, prisma } from "./prisma.server";
 import { v4 as uuidv4 } from "uuid";
 
-export type Entry = {
-  id: string;
-  content: string;
-  createdAt: Date;
-};
+export type Entry = Prisma.$GuestBookEntryPayload["scalars"];
 
 export const createGuestbookEntry = async (content: string, userId: string) => {
   // Generate uuid server side in order to reduce database load
@@ -19,7 +15,19 @@ export const createGuestbookEntry = async (content: string, userId: string) => {
   });
 };
 
-export const deleteEntry = async (id: string) => {
+export const updateGuestbookEntry = async (
+  content: string,
+  entryId: string
+) => {
+  return prisma.guestBookEntry.update({
+    data: {
+      content,
+    },
+    where: { id: entryId },
+  });
+};
+
+export const deleteGuestbookEntry = async (id: string) => {
   // Generate uuid server side in order to reduce database load
   return prisma.guestBookEntry.delete({
     where: { id },

@@ -32,7 +32,11 @@ export const getUserById = async (userId: string) => {
   return prisma.user.findFirst({
     include: {
       _count: true,
-      entries: true,
+      entries: {
+        orderBy: {
+          createdAt: "desc",
+        },
+      },
     },
     where: {
       id: userId,
